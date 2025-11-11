@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DrugCentral Query Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">DrugCentral Query Interface</h1>
+            <p class="text-gray-600">Ask questions about the DrugCentral database in natural language</p>
+        </header>
+
+        <!-- Query Form Block -->
+        {% block query_form %}
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <form
+                hx-post="/query"
+                hx-target="#results-container"
+                hx-swap="innerHTML"
+                hx-indicator="#loading-indicator"
+                hx-request='{"timeout":60000}'
+                hx-on::timeout="console.error('HTMX request timeout:', event.detail); document.getElementById('results-container').innerHTML = '<div class=&quot;bg-yellow-50 border border-yellow-200 rounded-lg p-6&quot;><h3 class=&quot;text-lg font-semibold text-yellow-900 mb-1&quot;>Request Timeout</h3><p class=&quot;text-yellow-800&quot;>The request took too long. The AI might be processing a complex query. Please try again or simplify your question.</p></div>'"
+                hx-on::response-error="console.error('HTMX response error:', event.detail); document.getElementById('results-container').innerHTML = '<div class=&quot;bg-red-50 border border-red-200 rounded-lg p-6&quot;><h3 class=&quot;text-lg font-semibold text-red-900 mb-1&quot;>Connection Error</h3><p class=&quot;text-red-800&quot;>Failed to connect to the server. Please check your connection and try again.</p></div>'"
+                hx-on::send-error="console.error('HTMX send error:', event.detail); document.getElementById('results-container').innerHTML = '<div class=&quot;bg-red-50 border border-red-200 rounded-lg p-6&quot;><h3 class=&quot;text-lg font-semibold text-red-900 mb-1&quot;>Network Error</h3><p class=&quot;text-red-800&quot;>Could not send request. Please check your network connection.</p></div>'"
+                hx-on::before-request="console.log('Request starting...')"
+                hx-on::after-request="console.log('Request completed:', event.detail.successful)"
+            >
+                <div class="mb-4">
+                    <label for="question" class="block text-sm font-medium text-gray-700 mb-2">
+                        Your Question
+                    </label>
+                    <textarea
+                        id="question"
+                        name="question"
+                        rows="3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g., What are the top 10 drugs approved by the FDA?"
+                        maxlength="500"
+                        required
+                    >{{ question }}</textarea>
+                    <p class="mt-1 text-sm text-gray-500">Maximum 500 characters</p>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button
+                        type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                    >
+                        Submit Question
+                    </button>
+
+                    <!-- Loading Indicator -->
+                    <div id="loading-indicator" class="htmx-indicator flex items-center gap-2">
+                        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-gray-600">Processing...</span>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% endblock %}
+
+        <!-- Results Container -->
+        <div id="results-container">
+            {% block results %}
+            {% if error %}
+            <!-- Error Message -->
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
+                <div class="flex items-start">
+                    <svg class="h-6 w-6 text-red-600 mr-3 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-red-900 mb-1">Error</h3>
+                        <p class="text-red-800">{{ error }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Show Generated SQL even on error -->
+            {% if generated_sql %}
+            <details class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mb-4">
+                <summary class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Behind the Scenes (Generated SQL)</span>
+                    </div>
+                    <svg class="h-5 w-5 text-gray-400 transform transition-transform details-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div class="px-6 py-4 bg-white border-t border-gray-200">
+                    <p class="text-sm text-gray-600 mb-3">The AI generated this SQL query:</p>
+                    <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">{{ generated_sql }}</pre>
+                </div>
+            </details>
+            {% endif %}
+            {% elif columns is not none %}
+            <!-- AI-Generated Answer (Emphasized) -->
+            {% if llm_answer %}
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-8 mb-6">
+                <div class="flex items-start">
+                    <div class="bg-white rounded-full p-3 mr-4 flex-shrink-0">
+                        <svg class="h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-2xl font-bold text-white mb-3">Answer</h3>
+                        <p class="text-lg text-white leading-relaxed">{{ llm_answer }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Behind the Scenes - Contains SQL and Results -->
+            {% if generated_sql %}
+            <details class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                <summary class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <svg class="h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        <span class="font-medium text-gray-700">Behind the Scenes</span>
+                        <span class="text-xs text-gray-500 ml-2">(SQL Query & Raw Results)</span>
+                    </div>
+                    <svg class="h-5 w-5 text-gray-400 transform transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </summary>
+                <div class="px-6 py-4 bg-white border-t border-gray-200">
+                    <!-- Your Question -->
+                    <div class="mb-4">
+                        <p class="text-sm font-medium text-gray-700 mb-1">Your Question:</p>
+                        <p class="text-sm text-gray-600 italic">"{{ question }}"</p>
+                    </div>
+
+                    <!-- Generated SQL -->
+                    <div class="mb-4">
+                        <p class="text-sm font-medium text-gray-700 mb-2">Generated SQL Query:</p>
+                        <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono leading-relaxed">{{ generated_sql }}</pre>
+                    </div>
+
+                    <!-- Info Badge -->
+                    <div class="flex items-center gap-2 text-xs text-gray-500 mb-4 pb-4 border-b border-gray-200">
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>This query was generated by Gemini AI and executed against the DrugCentral database</span>
+                    </div>
+
+                    <!-- Results Table -->
+                    <div class="mt-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-base font-semibold text-gray-900">Query Results</h3>
+                            <span class="text-sm text-gray-600">
+                                {{ row_count }} result{{ 's' if row_count != 1 else '' }}
+                            </span>
+                        </div>
+
+                        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        {% for column in columns %}
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                                            {{ column }}
+                                        </th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    {% for row in rows %}
+                                    <tr class="hover:bg-gray-50">
+                                        {% for cell in row %}
+                                        <td class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                                            {{ cell if cell is not none else '' }}
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </details>
+            {% endif %}
+            {% else %}
+            <!-- Empty State -->
+            <div class="bg-gray-100 border border-gray-200 rounded-lg p-8 text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No Results Yet</h3>
+                <p class="text-gray-600">Submit a question above to query the DrugCentral database</p>
+            </div>
+            {% endif %}
+            {% endblock %}
+        </div>
+    </div>
+</body>
+</html>

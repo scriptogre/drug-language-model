@@ -1,0 +1,26 @@
+[project]
+name = "drugcentral"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    # Web framework
+    "fastapi[standard]>=0.121.0",
+
+    # Templates
+    "jinja2>=3.1.6",
+    "jinja2-fragments>=1.10.0",
+    "python-multipart>=0.0.20",
+
+    # Database
+    "tortoise-orm[asyncpg]>=0.25.1",
+    "aerich[toml]==0.9.1",
+    "asyncpg>=0.30.0",
+
+    # Configuration
+    "pydantic>=2.12.4",
+    "pydantic-settings>=2.11.0",
+
+    # AI
+    "google-genai>=1.49.0",
+]
