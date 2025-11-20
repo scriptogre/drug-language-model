@@ -1,7 +1,7 @@
 [project]
 name = "drugcentral"
 version = "0.1.0"
-description = "Add your description here"
+description = "DrugCentral Natural Language Query Interface"
 requires-python = ">=3.13"
 dependencies = [
     # Web framework
@@ -14,13 +14,12 @@ dependencies = [
 
     # Database
     "tortoise-orm[asyncpg]>=0.25.1",
-    "aerich[toml]==0.9.1",
     "asyncpg>=0.30.0",
 
     # Configuration
     "pydantic>=2.12.4",
     "pydantic-settings>=2.11.0",
 
-    # AI
-    "google-genai>=1.49.0",
+    # AI - unified interface for multiple providers
+    "litellm>=1.61.0",
 ]

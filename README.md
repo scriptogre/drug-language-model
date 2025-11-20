@@ -1,73 +1,33 @@
 # DrugCentral Query Interface
 
-Ask questions about drugs in plain English, get answers powered by AI + real pharmaceutical data.
+Natural language queries for pharmaceutical data using LLMs and SQL.
 
-## What This Does
+## What It Does
 
-This app lets you query the DrugCentral pharmaceutical database using natural language. Type "What drugs treat diabetes?" and it converts your question to SQL, runs it against PostgreSQL, and gives you a human-readable answer.
+Query the DrugCentral database in plain English. An LLM converts your question to SQL, executes it against PostgreSQL, and returns human-readable answers.
 
-**Tech Stack:**
-- Backend: FastAPI (Python 3.13)
-- Database: PostgreSQL 17 with DrugCentral dataset
-- AI: Google Gemini (converts English → SQL)
-- Frontend: HTMX + Tailwind CSS
+**Stack:** FastAPI, PostgreSQL 17, LiteLLM (Anthropic/OpenAI/Google), HTMX, Tailwind
 
-## Setup
+⚠️ **Heavy development** - API and features subject to change
 
-### Prerequisites
-- Docker & Docker Compose
-- Google API key (for Gemini AI) - get one at [Google AI Studio](https://aistudio.google.com/app/apikey)
+## Getting Started
 
-### Quick Start
+**Prerequisites:** Docker, API key (Anthropic/OpenAI/Google)
 
-1. **Clone and navigate to project**
-   ```bash
-   cd drugcentral
-   ```
+```bash
+# Setup
+cp .env.example .env         # Add your API key
+just setup                    # Download database dump
+just build                    # Build containers
+just up                       # Start services
 
-2. **Create `.env` from `.env.example`, and update `GOOGLE_API_KEY`**:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Download `drugcentral.dump.<version>.sql.gz` [here](https://drugcentral.org/ActiveDownload)**
-4. **Copy the `.sql.gz` file to `data/` directory**
-5. **Start everything**
-   ```bash
-   docker compose up
-   ```
-
-6. **Open browser**
-   ```
-   http://localhost:8000
-   ```
-
-That's it. The database automatically loads automatically on first run.
-
-## How It Works
-
-```
-You type: "What drugs treat migraines?"
-         ↓
-Gemini AI generates SQL query
-         ↓
-PostgreSQL executes query
-         ↓
-Gemini formats results in plain English
-         ↓
-You see: Human answer + data table + SQL used
+# Open http://localhost:8000
 ```
 
-## Example Queries
-
-- "What drugs are approved for treating hypertension?"
-- "Show me all drugs that target the dopamine receptor"
-- "What are the side effects of aspirin?"
-- "List drugs approved by FDA in 2020"
-
-## Troubleshooting
-
-- **Port 8000 already in use:** Change port in docker-compose.yml
-- **Database connection fails:** Check PostgreSQL is running and .env credentials match
-- **AI not responding:** Verify GOOGLE_API_KEY is valid
-- **Slow queries:** Check data/README.txt for database optimization tips
+**Commands:**
+- `just setup` - download DrugCentral database
+- `just build` - build Docker images
+- `just up` - start services
+- `just down` - stop services
+- `just logs` - view logs
+- `just psql` - access database

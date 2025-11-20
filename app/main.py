@@ -7,8 +7,7 @@ from app.schema_docs import SCHEMA_OVERVIEW
 from app.utils import extract_sql_from_text, is_safe_query
 from app.config import settings
 from app.db import execute_raw_query
-from app.gemini import generate_sql, generate_answer
-
+from app import llm
 
 
 # FastAPI Application
@@ -63,16 +62,20 @@ async def submit_query(request: Request, question: str = Form(...)):
                 block_name="results"
             )
 
-        # Generate SQL using Gemini
+        # Generate SQL using LiteLLM
         import time
         start_time = time.time()
-        print(f"[DEBUG] Starting Gemini API call for question: {question[:50]}...")
-        raw_sql = await generate_sql(question, SCHEMA_OVERVIEW)
+        print(f"[DEBUG] Starting SQL generation for question: {question[:50]}...")
+
+        raw_sql, sql_usage = await llm.generate_sql(question, SCHEMA_OVERVIEW)
+
         elapsed = time.time() - start_time
-        print(f"[DEBUG] Gemini API call completed in {elapsed:.2f}s")
+        print(f"[DEBUG] SQL generation completed in {elapsed:.2f}s")
+        print(f"[DEBUG] SQL generation tokens - Input: {sql_usage['input_tokens']}, Output: {sql_usage['output_tokens']}, Total: {sql_usage['total_tokens']}")
 
         # Extract SQL from potential markdown
         sql = extract_sql_from_text(raw_sql)
+        print(f"[DEBUG] Generated SQL: {sql}")
 
         # Validate SQL safety
         is_safe, error_msg = is_safe_query(sql)
@@ -91,12 +94,15 @@ async def submit_query(request: Request, question: str = Form(...)):
         # Execute query
         result = await execute_raw_query(sql)
 
-        # Generate natural language answer
+        # Generate natural language answer using LiteLLM
         print(f"[DEBUG] Generating natural language answer...")
         answer_start_time = time.time()
-        llm_answer = await generate_answer(question, sql, result)
+
+        llm_answer, answer_usage = await llm.generate_answer(question, sql, result)
+
         answer_elapsed = time.time() - answer_start_time
         print(f"[DEBUG] Answer generation completed in {answer_elapsed:.2f}s")
+        print(f"[DEBUG] Answer generation tokens - Input: {answer_usage['input_tokens']}, Output: {answer_usage['output_tokens']}, Total: {answer_usage['total_tokens']}")
 
         # Render results
         return templates.TemplateResponse(
@@ -108,7 +114,9 @@ async def submit_query(request: Request, question: str = Form(...)):
                 "row_count": result["row_count"],
                 "question": question,
                 "generated_sql": sql,  # Show the executed SQL
-                "llm_answer": llm_answer  # Show the AI-generated answer
+                "llm_answer": llm_answer,  # Show the AI-generated answer
+                "sql_usage": sql_usage,  # Token usage for SQL generation
+                "answer_usage": answer_usage  # Token usage for answer generation
             },
             block_name="results"
         )
@@ -121,14 +129,14 @@ async def submit_query(request: Request, question: str = Form(...)):
         traceback.print_exc()
 
         # Provide user-friendly error messages
-        if "Gemini API error" in error_message or "google.api_core" in error_message:
+        if "LLM API error" in error_message or "api" in error_message.lower():
             error_message = "The AI service is currently unavailable. Please try again in a moment."
         elif "statement timeout" in error_message.lower():
             error_message = "Your query took too long to execute. Try asking a more specific question."
         elif "connection" in error_message.lower():
             error_message = "Database connection error. Please try again."
         elif "API key" in error_message or "authentication" in error_message.lower():
-            error_message = "API authentication failed. Please check your Gemini API key configuration."
+            error_message = "API authentication failed. Please check your API key configuration."
         else:
             error_message = f"Unable to execute query. Please try rephrasing your question. (Debug: {str(e)[:100]})"
 

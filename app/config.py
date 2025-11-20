@@ -55,9 +55,13 @@ class Settings(BaseSettings):
     def TEMPLATES_DIR(self) -> Path:
         return self.BASE_DIR / "templates"
 
-    # External APIs
+    # LLM Configuration (using LiteLLM)
     # --------------------
-    GOOGLE_API_KEY: str  # Required - must be set in .env
+    # Model for SQL generation (use best reasoning model)
+    SQL_MODEL: str = "claude-sonnet-4-5"
+
+    # Model for answer generation (use fast/cheap model)
+    ANSWER_MODEL: str = "claude-haiku-4-5"
 
 
 settings = Settings()  # type: ignore

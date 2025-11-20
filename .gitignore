@@ -1,6 +1,10 @@
 # Environment variables
 .env
 
+# Database dumps
+data/*.sql.gz
+data/*.sql
+
 # Python
 __pycache__/
 *.py[cod]
