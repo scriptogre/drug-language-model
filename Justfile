@@ -6,7 +6,7 @@ setup:
     set -euo pipefail
     mkdir -p data
     cd data
-    [ -f "01-drugcentral.dump.11012023.sql.gz" ] || xh --download https://unmtid-dbs.net/download/drugcentral.dump.11012023.sql.gz --output 01-drugcentral.dump.11012023.sql.gz
+    [ -f "01-drugcentral.dump.11012023.sql.gz" ] || curl -L -o 01-drugcentral.dump.11012023.sql.gz https://unmtid-dbs.net/download/drugcentral.dump.11012023.sql.gz
 
 build:
     docker compose build
