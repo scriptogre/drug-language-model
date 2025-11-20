@@ -1,0 +1,57 @@
+services:
+  fastapi:
+    build: .
+    expose: [8000]
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_DB: drugcentral
+    volumes:
+      - .:/code
+    init: true
+    tty: true
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - default
+      - discovernet
+    restart: always
+
+  postgres:
+    image: postgres:17
+    expose: [5432]
+    env_file: .env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: drugcentral
+    init: true
+    command:
+      - "postgres"
+      - "-c"
+      - "max_wal_size=4GB"
+      - "-c"
+      - "checkpoint_timeout=30min"
+      - "-c"
+      - "shared_buffers=512MB"
+      - "-c"
+      - "maintenance_work_mem=256MB"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  postgres_data:
+
+networks:
+  discovernet:
+    external: true
